@@ -1,0 +1,315 @@
+/* ==========================================================================
+   INSTAGRAM FOCUS SHIELD - STYLESHEET
+   Allows ONLY: Direct Messages & Stories
+   Blocks: Reels, Explore, Infinite Feed, Algorithmic Suggestions
+   ========================================================================== */
+
+/* 1. HIDE ALL REELS NAVIGATION & BUTTONS (Sidebar, Bottom Bar, Floating) */
+a[href*="/reels/"],
+a[href^="/reels"],
+div[role="button"]:has(svg[aria-label="Reels"]),
+div[role="button"]:has(svg[aria-label="reels"]),
+svg[aria-label="Reels"],
+svg[aria-label="reels"],
+div[data-testid="reels-tab"],
+span:has(> svg[aria-label="Reels"]) {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+}
+
+/* 2. HIDE EXPLORE NAVIGATION & SEARCH FEED */
+a[href*="/explore/"],
+a[href^="/explore"],
+div[role="button"]:has(svg[aria-label="Explore"]),
+svg[aria-label="Explore"],
+div[data-testid="explore-tab"] {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+}
+
+/* 3. HOME PAGE: PRESERVE STORIES TRAY, HIDE INFINITE FEED */
+body[data-page-type="home"] main article,
+body[data-page-type="home"] main div:has(> article),
+body[data-page-type="home"] div[data-testid="feed-container"] > div:nth-child(n+2),
+body[data-page-type="home"] section > main > div > div > div > div:nth-child(n+2):has(article) {
+  display: none !important;
+}
+
+/* Hide suggested posts / suggested users right rail on home */
+body[data-page-type="home"] div[style*="max-width: 630px"] ~ div,
+body[data-page-type="home"] div:has(> div > a[href*="/explore/people/"]) {
+  display: none !important;
+}
+
+/* 4. STORIES TRAY & STORY VIEWER MUST BE 100% VISIBLE AND FUNCTIONAL */
+div[role="menu"]:has(canvas),
+div[role="menu"]:has(img[alt*="'s profile picture"]),
+div[aria-label*="Stories"],
+div[aria-label*="stories"],
+div:has(> div > div[role="menu"]),
+div[style*="height: 119px"],
+div[style*="height: 85px"] {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Ensure full-screen Story Viewer is 100% visible and interactive */
+section:has(div[aria-label*="Story"]),
+div:has(> div > video[src*="story"]),
+div[data-page-type="stories"] {
+  display: block !important;
+  visibility: visible !important;
+}
+
+/* 5. DIRECT MESSAGES VIEW MUST BE 100% VISIBLE AND FUNCTIONAL */
+section:has(div[aria-label*="Direct"]),
+section:has(div[aria-label*="Chats"]),
+div[data-page-type="direct"] {
+  display: flex !important;
+  visibility: visible !important;
+}
+
+/* 6. FOCUS CARD PLACEHOLDER ON HOME FEED */
+#focus-mode-feed-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 32px auto;
+  padding: 32px 24px;
+  max-width: 520px;
+  background: linear-gradient(135deg, rgba(24, 24, 27, 0.95), rgba(15, 15, 18, 0.95));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(12px);
+  color: #fafafa;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  animation: focusFadeIn 0.3s ease-out;
+  z-index: 10;
+}
+
+#focus-mode-feed-placeholder .focus-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  margin-bottom: 16px;
+  box-shadow: 0 6px 16px rgba(253, 29, 29, 0.3);
+}
+
+#focus-mode-feed-placeholder h2 {
+  margin: 0 0 8px 0;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  background: linear-gradient(90deg, #ffffff, #d4d4d8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+#focus-mode-feed-placeholder p {
+  margin: 0 0 20px 0;
+  font-size: 14px;
+  color: #a1a1aa;
+  line-height: 1.5;
+}
+
+#focus-mode-feed-placeholder .focus-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+#focus-mode-feed-placeholder .focus-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+#focus-mode-feed-placeholder .btn-primary {
+  background: linear-gradient(135deg, #0095f6, #0077e6);
+  color: #ffffff;
+}
+
+#focus-mode-feed-placeholder .btn-primary:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+#focus-mode-feed-placeholder .btn-secondary {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e4e4e7;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+#focus-mode-feed-placeholder .btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.14);
+  transform: translateY(-1px);
+}
+
+#focus-mode-feed-placeholder .focus-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 18px;
+  font-size: 11px;
+  color: #71717a;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+/* 7. TOAST NOTIFICATION FOR INTERCEPTED DISTRACTIONS */
+#focus-block-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: #18181b;
+  border: 1px solid #ef4444;
+  color: #fca5a5;
+  padding: 12px 18px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+  z-index: 999999;
+  animation: slideToast 0.3s ease-out;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+@keyframes slideToast {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes focusFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* 8. SLEEK FLOATING TOP FOCUS TOOLBAR */
+#insta-focus-top-toolbar {
+  position: fixed;
+  top: 12px;
+  right: 24px;
+  z-index: 999998;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(18, 18, 22, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 9999px;
+  padding: 6px 10px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  user-select: none;
+}
+
+#insta-focus-top-toolbar .nav-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #a1a1aa;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  text-decoration: none;
+}
+
+#insta-focus-top-toolbar .nav-tab:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+#insta-focus-top-toolbar .nav-tab.active {
+  color: #ffffff;
+  background: linear-gradient(135deg, rgba(225, 48, 108, 0.28), rgba(131, 58, 180, 0.28));
+  border: 1px solid rgba(225, 48, 108, 0.4);
+  box-shadow: 0 2px 10px rgba(225, 48, 108, 0.2);
+}
+
+#insta-focus-top-toolbar .focus-divider {
+  width: 1px;
+  height: 18px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+#insta-focus-top-toolbar .focus-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #34d399;
+  background: rgba(52, 211, 153, 0.1);
+  border: 1px solid rgba(52, 211, 153, 0.25);
+  padding: 4px 10px;
+  border-radius: 9999px;
+}
+
+#insta-focus-top-toolbar .refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 9999px;
+  background: transparent;
+  color: #a1a1aa;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+#insta-focus-top-toolbar .refresh-btn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+}

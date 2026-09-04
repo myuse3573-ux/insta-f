@@ -1,80 +1,230 @@
-const { app, BrowserWindow, shell } = require('electron');
-const { spawn } = require('child_process');
-const http = require('http');
+const { app, BrowserWindow, session, ipcMain, shell, Menu } = require('electron');
 const path = require('path');
+const fs = require('fs');
 
 let mainWindow = null;
-let nextServerProcess = null;
 
-const PORT = 3000;
-const APP_URL = `http://localhost:${PORT}`;
+const DEFAULT_START_URL = 'https://www.instagram.com/direct/inbox/';
+const STORIES_URL = 'https://www.instagram.com/';
+const CSS_PATH = path.join(__dirname, 'electron', 'focus-styles.css');
+const PRELOAD_PATH = path.join(__dirname, 'electron', 'focus-shield.js');
 
-function isServerRunning() {
-  return new Promise((resolve) => {
-    const req = http.get(APP_URL, (res) => {
-      resolve(true);
-    });
-    req.on('error', () => {
-      resolve(false);
-    });
-    req.end();
+const USER_AGENT =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36';
+
+function isDistractionUrl(url) {
+  if (!url) return false;
+  const lower = url.toLowerCase();
+  return (
+    lower.includes('/reels/') ||
+    lower.endsWith('/reels') ||
+    lower.includes('/reels?') ||
+    lower.includes('/explore/') ||
+    lower.endsWith('/explore') ||
+    lower.includes('/explore?')
+  );
+}
+
+function setupNetworkFilters(ses) {
+  // Intercept and redirect any network requests targeting reels or explore
+  const filter = {
+    urls: ['*://*.instagram.com/*'],
+  };
+
+  ses.webRequest.onBeforeRequest(filter, (details, callback) => {
+    if (isDistractionUrl(details.url)) {
+      if (details.resourceType === 'main_frame') {
+        // Redirect browser to direct inbox
+        callback({ redirectURL: DEFAULT_START_URL });
+        return;
+      }
+      // Cancel background fetch/xhr for reels or explore feeds
+      callback({ cancel: true });
+      return;
+    }
+    callback({ cancel: false });
   });
 }
 
-async function waitForServer(timeoutMs = 30000) {
-  const startTime = Date.now();
-  while (Date.now() - startTime < timeoutMs) {
-    const running = await isServerRunning();
-    if (running) return true;
-    await new Promise((r) => setTimeout(r, 500));
+function injectFocusStyles(webContents) {
+  try {
+    if (fs.existsSync(CSS_PATH)) {
+      const css = fs.readFileSync(CSS_PATH, 'utf8');
+      webContents.insertCSS(css).catch((err) => {
+        console.error('Failed to inject focus CSS:', err);
+      });
+    }
+  } catch (err) {
+    console.error('Error reading focus CSS file:', err);
   }
-  return false;
 }
 
-function startNextServer() {
-  console.log('Starting Next.js background server...');
-  const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-  nextServerProcess = spawn(npmCmd, ['run', 'dev'], {
-    cwd: __dirname,
-    shell: true,
-    stdio: 'ignore',
-  });
+function createFocusMenu() {
+  const template = [
+    {
+      label: 'Focus Navigation',
+      submenu: [
+        {
+          label: '💬 Direct Messages',
+          accelerator: 'CmdOrCtrl+1',
+          click: () => {
+            if (mainWindow) mainWindow.loadURL(DEFAULT_START_URL);
+          },
+        },
+        {
+          label: '📸 Stories (Home Tray)',
+          accelerator: 'CmdOrCtrl+2',
+          click: () => {
+            if (mainWindow) mainWindow.loadURL(STORIES_URL);
+          },
+        },
+        { type: 'separator' },
+        {
+          label: '🔄 Reload',
+          accelerator: 'CmdOrCtrl+R',
+          click: () => {
+            if (mainWindow) mainWindow.reload();
+          },
+        },
+        {
+          label: '⬅️ Back',
+          accelerator: 'Alt+Left',
+          click: () => {
+            if (mainWindow && mainWindow.webContents.canGoBack()) {
+              mainWindow.webContents.goBack();
+            }
+          },
+        },
+        {
+          label: '➡️ Forward',
+          accelerator: 'Alt+Right',
+          click: () => {
+            if (mainWindow && mainWindow.webContents.canGoForward()) {
+              mainWindow.webContents.goForward();
+            }
+          },
+        },
+        { type: 'separator' },
+        {
+          label: 'Exit Focus App',
+          accelerator: 'CmdOrCtrl+Q',
+          click: () => app.quit(),
+        },
+      ],
+    },
+    {
+      label: 'View',
+      submenu: [
+        { role: 'resetZoom' },
+        { role: 'zoomIn' },
+        { role: 'zoomOut' },
+        { type: 'separator' },
+        { role: 'togglefullscreen' },
+        {
+          label: 'Toggle Developer Tools',
+          accelerator: 'F12',
+          click: () => {
+            if (mainWindow) mainWindow.webContents.toggleDevTools();
+          },
+        },
+      ],
+    },
+    {
+      label: 'Shield Info',
+      submenu: [
+        {
+          label: '🛡️ Reels: Blocked',
+          enabled: false,
+        },
+        {
+          label: '🛡️ Explore: Blocked',
+          enabled: false,
+        },
+        {
+          label: '🛡️ Infinite Feed: Blocked',
+          enabled: false,
+        },
+        {
+          label: '✓ Allowed: Stories & Messages Only',
+          enabled: false,
+        },
+      ],
+    },
+  ];
 
-  nextServerProcess.on('error', (err) => {
-    console.error('Failed to start Next.js dev server:', err);
-  });
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
 }
 
 function createDesktopWindow() {
+  const customSession = session.fromPartition('persist:instagram_focus_session');
+  customSession.setUserAgent(USER_AGENT);
+  setupNetworkFilters(customSession);
+
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 850,
     minWidth: 900,
-    minHeight: 600,
-    title: 'Instagram Messaging Dashboard',
-    autoHideMenuBar: true,
+    minHeight: 650,
+    title: 'Instagram Focus • Stories & Messages Only',
     backgroundColor: '#09090b',
     show: false,
     webPreferences: {
+      session: customSession,
+      preload: PRELOAD_PATH,
       nodeIntegration: false,
       contextIsolation: true,
+      sandbox: false,
+      spellcheck: true,
     },
   });
 
-  mainWindow.loadURL(APP_URL);
+  createFocusMenu();
+
+  // Load start page (Direct Messages)
+  mainWindow.loadURL(DEFAULT_START_URL);
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
     mainWindow.focus();
   });
 
-  // Open external links in default browser
+  // Inject focus styles whenever page finishes loading or navigation occurs
+  mainWindow.webContents.on('did-finish-load', () => {
+    injectFocusStyles(mainWindow.webContents);
+  });
+
+  mainWindow.webContents.on('did-navigate', (event, url) => {
+    injectFocusStyles(mainWindow.webContents);
+  });
+
+  mainWindow.webContents.on('did-navigate-in-page', (event, url) => {
+    if (isDistractionUrl(url)) {
+      mainWindow.loadURL(DEFAULT_START_URL);
+    }
+  });
+
+  // Intercept any navigation event targeting reels or explore
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    if (isDistractionUrl(url)) {
+      event.preventDefault();
+      mainWindow.loadURL(DEFAULT_START_URL);
+    }
+  });
+
+  // Handle new window / link clicks
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (!url.startsWith(APP_URL)) {
-      shell.openExternal(url);
+    if (isDistractionUrl(url)) {
       return { action: 'deny' };
     }
-    return { action: 'allow' };
+    // Allow internal Instagram links in the same window
+    if (url.includes('instagram.com')) {
+      mainWindow.loadURL(url);
+      return { action: 'deny' };
+    }
+    // External links open in user's default browser
+    shell.openExternal(url);
+    return { action: 'deny' };
   });
 
   mainWindow.on('closed', () => {
@@ -82,34 +232,28 @@ function createDesktopWindow() {
   });
 }
 
-app.on('ready', async () => {
-  const alreadyRunning = await isServerRunning();
-  if (!alreadyRunning) {
-    startNextServer();
+// IPC handlers from renderer
+ipcMain.on('focus-navigate', (event, target) => {
+  if (!mainWindow) return;
+  if (target === 'direct') {
+    mainWindow.loadURL(DEFAULT_START_URL);
+  } else if (target === 'stories') {
+    mainWindow.loadURL(STORIES_URL);
   }
+});
 
-  const serverReady = await waitForServer();
-  if (serverReady) {
-    createDesktopWindow();
-  } else {
-    console.error('Next.js server failed to respond in time.');
+app.on('ready', () => {
+  createDesktopWindow();
+});
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
     app.quit();
   }
 });
 
-app.on('window-all-closed', () => {
-  if (nextServerProcess) {
-    try {
-      if (process.platform === 'win32') {
-        spawn('taskkill', ['/pid', nextServerProcess.pid, '/f', '/t']);
-      } else {
-        nextServerProcess.kill();
-      }
-    } catch (e) {
-      // Ignore cleanup error
-    }
-  }
-  if (process.platform !== 'darwin') {
-    app.quit();
+app.on('activate', () => {
+  if (mainWindow === null) {
+    createDesktopWindow();
   }
 });
