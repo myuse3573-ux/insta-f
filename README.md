@@ -20,12 +20,10 @@ A distraction-free Instagram desktop application built with **Electron** that st
 
 ### ⚡ Quick Start: Launch Instagram Focus App
 
-1. Double-click [`Start-App.bat`](file:///d:/ALL%20USER/TOOL/insta%20f/Start-App.bat) in the project folder.
-2. Or run from the command line:
-   ```bash
-   npm run app
-   ```
-3. To place a shortcut on your Desktop, double-click [`Create-Desktop-Shortcut.bat`](file:///d:/ALL%20USER/TOOL/insta%20f/Create-Desktop-Shortcut.bat).
+1. Double-click the **Instagram Focus** shortcut on your **Desktop** or in the project folder.
+   - Launches directly as a native Windows desktop app (no terminal window).
+2. Or double-click [`Launch-App.vbs`](file:///d:/ALL%20USER/TOOL/insta%20f/Launch-App.vbs) or [`Start-App.bat`](file:///d:/ALL%20USER/TOOL/insta%20f/Start-App.bat).
+3. To regenerate the desktop shortcut with the official Instagram icon at any time, run [`Create-Desktop-Shortcut.bat`](file:///d:/ALL%20USER/TOOL/insta%20f/Create-Desktop-Shortcut.bat).
 
 ---
 

@@ -8,6 +8,7 @@ const DEFAULT_START_URL = 'https://www.instagram.com/direct/inbox/';
 const STORIES_URL = 'https://www.instagram.com/';
 const CSS_PATH = path.join(__dirname, 'electron', 'focus-styles.css');
 const PRELOAD_PATH = path.join(__dirname, 'electron', 'focus-shield.js');
+const ICON_PATH = path.join(__dirname, 'electron', 'icon.png');
 
 const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36';
@@ -76,6 +77,21 @@ function createFocusMenu() {
           accelerator: 'CmdOrCtrl+2',
           click: () => {
             if (mainWindow) mainWindow.loadURL(STORIES_URL);
+          },
+        },
+        {
+          label: '✕ Exit Story',
+          accelerator: 'Escape',
+          click: () => {
+            if (mainWindow) {
+              mainWindow.webContents.executeJavaScript(`
+                if (window.focusShield && typeof window.focusShield.exitStory === 'function') {
+                  window.focusShield.exitStory();
+                } else if (window.location.pathname.startsWith('/stories')) {
+                  window.location.href = 'https://www.instagram.com/direct/inbox/';
+                }
+              `).catch(() => {});
+            }
           },
         },
         { type: 'separator' },
@@ -167,6 +183,7 @@ function createDesktopWindow() {
     minWidth: 900,
     minHeight: 650,
     title: 'Instagram Focus • Stories & Messages Only',
+    icon: fs.existsSync(ICON_PATH) ? ICON_PATH : undefined,
     backgroundColor: '#09090b',
     show: false,
     webPreferences: {
@@ -235,7 +252,7 @@ function createDesktopWindow() {
 // IPC handlers from renderer
 ipcMain.on('focus-navigate', (event, target) => {
   if (!mainWindow) return;
-  if (target === 'direct') {
+  if (target === 'direct' || target === 'exit-story') {
     mainWindow.loadURL(DEFAULT_START_URL);
   } else if (target === 'stories') {
     mainWindow.loadURL(STORIES_URL);

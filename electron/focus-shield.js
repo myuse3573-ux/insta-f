@@ -10,6 +10,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('focusShield', {
   navigateMessages: () => ipcRenderer.send('focus-navigate', 'direct'),
   navigateStories: () => ipcRenderer.send('focus-navigate', 'stories'),
+  exitStory: () => exitStoryAction(),
 });
 
 function showBlockedToast(featureName) {
@@ -32,6 +33,107 @@ function showBlockedToast(featureName) {
   toast._timeout = setTimeout(() => {
     if (toast) toast.style.display = 'none';
   }, 3500);
+}
+
+function exitStoryAction() {
+  // 1. Check for Instagram's native close/exit button
+  const closeSelectors = [
+    'svg[aria-label="Close"]',
+    'svg[aria-label="close"]',
+    'button[aria-label="Close"]',
+    'button[aria-label="close"]',
+    'div[aria-label="Close"]',
+    'div[aria-label="close"]',
+    '[aria-label*="Close" i]',
+  ];
+
+  for (const selector of closeSelectors) {
+    const el = document.querySelector(selector);
+    if (el) {
+      const btn = el.closest('button, div[role="button"]') || el;
+      if (typeof btn.click === 'function') {
+        btn.click();
+        break;
+      }
+    }
+  }
+
+  // 2. Dispatch Escape keydown and keyup events
+  const escDown = new KeyboardEvent('keydown', {
+    key: 'Escape',
+    code: 'Escape',
+    keyCode: 27,
+    which: 27,
+    bubbles: true,
+    cancelable: true,
+  });
+  const escUp = new KeyboardEvent('keyup', {
+    key: 'Escape',
+    code: 'Escape',
+    keyCode: 27,
+    which: 27,
+    bubbles: true,
+    cancelable: true,
+  });
+
+  document.dispatchEvent(escDown);
+  document.dispatchEvent(escUp);
+  if (document.activeElement) {
+    document.activeElement.dispatchEvent(escDown);
+    document.activeElement.dispatchEvent(escUp);
+  }
+
+  // 3. Fallback: navigate out if still on stories
+  setTimeout(() => {
+    if (window.location.pathname.startsWith('/stories')) {
+      window.location.href = '/direct/inbox/';
+    }
+  }, 150);
+}
+
+function isCurrentlyViewingStory() {
+  const path = window.location.pathname;
+  if (path.startsWith('/stories')) return true;
+  return !!document.querySelector('section:has(div[aria-label*="Story" i]), div:has(> div > video[src*="story"]), div[data-page-type="stories"]');
+}
+
+function updateStoryExitButton() {
+  const isViewing = isCurrentlyViewingStory();
+  let exitBtn = document.getElementById('insta-focus-story-exit-btn');
+
+  if (isViewing) {
+    if (!exitBtn && document.body) {
+      exitBtn = document.createElement('button');
+      exitBtn.id = 'insta-focus-story-exit-btn';
+      exitBtn.title = 'Exit Story and Return to Messages (Esc)';
+      exitBtn.setAttribute('aria-label', 'Exit Story');
+      exitBtn.innerHTML = `
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+        <span>Exit Story</span>
+        <kbd>Esc</kbd>
+      `;
+
+      exitBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        exitStoryAction();
+      });
+
+      document.body.appendChild(exitBtn);
+    }
+  } else {
+    if (exitBtn) {
+      exitBtn.remove();
+    }
+  }
+
+  const toolbarExitBtn = document.getElementById('toolbar-btn-exit-story');
+  if (toolbarExitBtn) {
+    toolbarExitBtn.style.display = isViewing ? 'inline-flex' : 'none';
+  }
 }
 
 function updatePageClassification() {
@@ -58,6 +160,7 @@ function updatePageClassification() {
 
   injectTopToolbar();
   updateToolbarActiveState();
+  updateStoryExitButton();
 }
 
 // Inject Floating Top Toolbar
@@ -72,6 +175,9 @@ function injectTopToolbar() {
     </button>
     <button id="toolbar-btn-stories" class="nav-tab" title="View Stories">
       <span>📸</span> Stories
+    </button>
+    <button id="toolbar-btn-exit-story" class="exit-story-tab" title="Exit Story (Esc)" style="display: none;">
+      <span>✕</span> Exit Story
     </button>
     <div class="focus-divider"></div>
     <div class="focus-badge" title="Focus Shield is active: Reels, Explore, and feed posts are blocked">
@@ -101,11 +207,18 @@ function injectTopToolbar() {
     }
   });
 
+  toolbar.querySelector('#toolbar-btn-exit-story')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    exitStoryAction();
+  });
+
   toolbar.querySelector('#toolbar-btn-refresh')?.addEventListener('click', () => {
     window.location.reload();
   });
 
   updateToolbarActiveState();
+  updateStoryExitButton();
 }
 
 function updateToolbarActiveState() {
@@ -269,15 +382,26 @@ window.addEventListener('popstate', () => {
   }, 50);
 });
 
+// Keyboard shortcut: Escape exits story immediately
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' || e.keyCode === 27) {
+    if (isCurrentlyViewingStory()) {
+      exitStoryAction();
+    }
+  }
+}, true);
+
 // Continuously observe DOM changes to keep blocking active as Instagram dynamically renders
 const observer = new MutationObserver(() => {
   purgeDistractionElements();
   injectTopToolbar();
+  updateStoryExitButton();
 });
 
 window.addEventListener('DOMContentLoaded', () => {
   updatePageClassification();
   purgeDistractionElements();
+  updateStoryExitButton();
   observer.observe(document.documentElement, {
     childList: true,
     subtree: true,
@@ -287,4 +411,5 @@ window.addEventListener('DOMContentLoaded', () => {
 window.addEventListener('load', () => {
   updatePageClassification();
   purgeDistractionElements();
+  updateStoryExitButton();
 });

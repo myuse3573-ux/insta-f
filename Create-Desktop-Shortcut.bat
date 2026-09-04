@@ -8,13 +8,14 @@ echo       CREATING DESKTOP SHORTCUT - INSTAGRAM FOCUS
 echo ======================================================================
 echo.
 
-powershell -Command "$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut([System.IO.Path]::Combine([System.Environment]::GetFolderPath('Desktop'), 'Instagram Focus.lnk')); $s.TargetPath = '%~dp0Start-App.bat'; $s.WorkingDirectory = '%~dp0'; $s.WindowStyle = 1; $s.Description = 'Instagram Focus - Stories and Messages Only (Reels Blocked)'; $s.IconLocation = 'shell32.dll,14'; $s.Save()"
+cd /d "%~dp0"
+powershell -ExecutionPolicy Bypass -File "%~dp0scripts\create-shortcuts.ps1"
 
 if %errorlevel% equ 0 (
-    echo [SUCCESS] Desktop shortcut "Instagram Focus" created on your Desktop!
+    echo [SUCCESS] Native Desktop shortcut created!
     echo.
-    echo You can now open your desktop and double-click "Instagram Focus"
-    echo to open Instagram with only Stories and Messages enabled.
+    echo Double-clicking "Instagram Focus" will open directly as a native
+    echo desktop app without opening any terminal or command prompt window.
 ) else (
     echo [ERROR] Could not create desktop shortcut automatically.
 )

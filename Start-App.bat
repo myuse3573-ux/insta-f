@@ -1,23 +1,18 @@
 @echo off
-title Instagram Focus - Stories & Messages Only
-color 0A
-cls
-
-echo ======================================================================
-echo             INSTAGRAM FOCUS - STORIES & MESSAGES ONLY
-echo ======================================================================
-echo.
-echo Launching distraction-free Instagram desktop window...
-echo Reels, Explore, and infinite feeds are permanently blocked!
-echo.
-
 cd /d "%~dp0"
 
-:: Launch standalone Electron desktop app
-npx electron .
-
-if %errorlevel% neq 0 (
-    echo.
-    echo [NOTE] Trying direct npm start...
-    npm run app
+:: If electron.exe exists, launch directly in GUI mode and close this terminal instantly
+if exist "%~dp0node_modules\electron\dist\electron.exe" (
+    start "" "%~dp0node_modules\electron\dist\electron.exe" "%~dp0."
+    exit /b 0
 )
+
+:: Otherwise launch via silent wscript launcher
+if exist "%~dp0Launch-App.vbs" (
+    wscript "%~dp0Launch-App.vbs"
+    exit /b 0
+)
+
+:: Fallback
+start "" npx electron .
+exit /b 0
